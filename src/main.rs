@@ -1,16 +1,27 @@
+extern crate clap;
 extern crate rand;
 extern crate num_bigint as bigint;
 extern crate num_traits;
 
+use clap::{Arg, App, SubCommand, AppSettings};
 use bigint::{RandBigInt, ToBigUint, BigUint, BigInt, Sign};
 use num_traits::{Zero, One};
 use std::cmp::Ordering;
-use std::io;
+use std::io::prelude::*;
+use std::error::Error;
+use std::fs::File;
+use std::path::Path;
 
 #[derive(Debug)]
 struct Key {
     exponent: BigUint,
     base: BigUint
+}
+
+impl Key {
+    fn to_string(&self) -> String {
+        format!("{} {}", self.exponent.to_str_radix(10), self.base.to_str_radix(10))
+    }
 }
 
 #[derive(Debug)]
@@ -21,9 +32,8 @@ struct KeySet {
 }
 
 impl KeySet {
-    fn gen_key() -> KeySet {
-        let mut rng1 = rand::thread_rng();
-        let mut rng2 = rand::thread_rng();
+    // TODO: should take numbits as argument
+    fn new() -> KeySet {
         let p = gen_prime(100);
         let q = gen_prime(100);
         let n = &p*&q;
@@ -150,17 +160,42 @@ fn mult_inverse(a: &BigUint, b: &BigUint) -> BigUint {
 }
 
 fn main() {
-    let key_set = KeySet::gen_key();
-    println!("Private Key {:#?}", key_set.get_private_key());
-    println!("Public Key {:#?}", key_set.get_public_key());
-    let mut input = String::new();
-    println!("Enter a positive integer");
-    io::stdin().read_line(&mut input)
-        .expect("Failed to read line");
-    let input: u32 = input.trim().parse()
-        .expect("Please enter a valid integer.");
-    println!("You entered: {}", input);
-    let enc = key_set.encrypt(input);
-    let dec = key_set.decrypt(&enc);
-    println!("{} {}",enc,dec);
+    let matches = App::new("RSA Encryption Algorithm")
+        .setting(AppSettings::ArgRequiredElseHelp)
+        .version("0.1")
+        .author("Rohit Sarkar")
+        .about("RSA implementation in Rust")
+        .subcommand(SubCommand::with_name("gen")
+                    .help("Generates keys"))
+        .subcommand(SubCommand::with_name("encrypt")
+                    .help("Encrypts plain text file using RSA algorithm"))
+        .subcommand(SubCommand::with_name("decrypt")
+                    .help("Decrypts a file encrypted with RSA algorithm"))
+        .get_matches();
+
+    match matches.subcommand_name() {
+        Some("gen") => {
+            let key_set = KeySet::new();
+            let path_priv_key = "key";
+            let path_pub_key = "key.pub";
+            create_file(path_priv_key, key_set.get_private_key().to_string().as_bytes());
+            create_file(path_pub_key, key_set.get_public_key().to_string().as_bytes());
+        },
+        Some("encrypt") => println!("encrypt"),
+        Some("decrypt") => println!("decrypt"),
+        _ => println!("dafuq")
+    };
+
+    fn create_file(filename: &str, contents: &[u8]) {
+            let mut file = match File::create(filename) {
+                Err(why) => panic!("Couldn't create {} file. {}", filename, why.description()),
+                Ok(file) => file
+            };
+
+            match file.write_all(contents) {
+                Err(why) => panic!("Couldn't write to {} file. {}", filename, why.description()),
+                Ok(_) => println!("successfully created {} file.", filename)
+            };
+    }
+
 }
