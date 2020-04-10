@@ -96,6 +96,10 @@ fn mult_inverse(a: &BigUint, b: &BigUint) -> BigUint {
         s1 = s2;
     }
 
+    while s0 < Zero::zero() {
+        s0 = s0 + BigInt::from_biguint(Sign::Plus, b.clone());
+        println!("falal");
+    }
     s0.to_biguint().expect("Something is fishy!")
 }
 
