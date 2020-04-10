@@ -7,6 +7,7 @@ use num_traits::{Zero, One};
 use std::cmp::Ordering;
 use std::io;
 
+#[derive(Debug)]
 struct Key {
     exponent: BigUint,
     base: BigUint
@@ -35,7 +36,6 @@ impl KeySet {
 
         // d need to be coprime to phi. A prime greater than max(p,q) should do
         let d = gen_prime_above(100, &maxpq);
-        println!("{} {}", d, phi);
         let e = mult_inverse(&phi, &d);
 
         KeySet {
@@ -51,6 +51,20 @@ impl KeySet {
 
     fn decrypt(&self, cipher: &BigUint) -> BigUint {
         cipher.modpow(&self.d, &self.n)
+    }
+
+    fn get_private_key(&self) -> Key {
+        Key {
+            exponent : self.d.clone(),
+            base : self.n.clone()
+        }
+    }
+
+    fn get_public_key(&self) -> Key {
+        Key {
+            exponent : self.e.clone(),
+            base : self.n.clone()
+        }
     }
 
 }
@@ -106,11 +120,11 @@ fn is_prime(num: &BigUint) -> bool {
         let a = rng.gen_biguint_range(&0_u8.to_biguint().unwrap(), &(num-1u32)); //check for inclusivity
         let result = a.modpow(&(num-1u32), num);
         if result != 1_u8.to_biguint().unwrap() {
-          return false;
+            return false;
         }
     }
     return true;
-    
+
 }
 
 fn mult_inverse(a: &BigUint, b: &BigUint) -> BigUint {
@@ -132,11 +146,13 @@ fn mult_inverse(a: &BigUint, b: &BigUint) -> BigUint {
     while s0 < Zero::zero() {
         s0 = s0 + BigInt::from_biguint(Sign::Plus, a.clone());
     }
-    s0.to_biguint().expect("Something is fishy!")
+    s0.to_biguint().expect("Error converting to unsigned integer")
 }
 
 fn main() {
     let key_set = KeySet::gen_key();
+    println!("Private Key {:#?}", key_set.get_private_key());
+    println!("Public Key {:#?}", key_set.get_public_key());
     let mut input = String::new();
     println!("Enter a positive integer");
     io::stdin().read_line(&mut input)
@@ -147,5 +163,4 @@ fn main() {
     let enc = key_set.encrypt(input);
     let dec = key_set.decrypt(&enc);
     println!("{} {}",enc,dec);
-
 }
