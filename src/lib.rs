@@ -29,9 +29,11 @@ pub struct KeySet {
 impl KeySet {
     // TODO: make bitsize of key configurable
     pub fn new() -> KeySet {
-        let p = util::gen_prime(100);
-        let q = util::gen_prime(100);
+        let num_bits = 1024;
+        let p = util::gen_prime(num_bits/2);
+        let q = util::gen_prime(num_bits/2);
         let n = &p*&q;
+        println!("{}", n.bits());
         let maxpq = match p.cmp(&q) {
             Ordering::Less => &q,
             _ => &p
