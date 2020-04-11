@@ -1,5 +1,5 @@
 [package]
-name = "rsa"
+name = "og_rsa"
 version = "0.1.0"
 authors = ["Rohit Sarkar <rohitsarkar5398@gmail.com>"]
 edition = "2018"

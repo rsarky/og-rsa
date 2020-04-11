@@ -3,7 +3,7 @@ extern crate rand;
 extern crate num_bigint as bigint;
 extern crate num_traits;
 
-use rsa::{KeySet, create_file, read_key_files, encrypt_file, decrypt_file};
+use og_rsa::{KeySet, create_file, read_key_files, encrypt_file, decrypt_file};
 use clap::{Arg, App, SubCommand, AppSettings};
 
 fn main() {
@@ -13,9 +13,10 @@ fn main() {
         .author("Rohit Sarkar")
         .about("RSA implementation in Rust")
         .subcommand(SubCommand::with_name("generate")
+                    .about("Generates a pair of public and private keys (key and key.pub)")
                     .help("Generates keys"))
         .subcommand(SubCommand::with_name("encrypt")
-                    .about("Encrypts plain text file using RSA algorithm")
+                    .about("Encrypts a plain text file using the RSA algorithm")
                     .arg(Arg::with_name("key")
                          .short("k")
                          .long("key")
@@ -31,7 +32,7 @@ fn main() {
                          .help("Plain text file to encode")
                          .takes_value(true)))
         .subcommand(SubCommand::with_name("decrypt")
-                    .help("Decrypts a file encrypted with RSA algorithm")
+                    .about("Decrypts a file encrypted with the RSA algorithm")
                     .arg(Arg::with_name("key")
                          .short("k")
                          .long("key")
