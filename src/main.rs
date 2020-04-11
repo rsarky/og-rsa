@@ -10,7 +10,9 @@ use std::cmp::Ordering;
 use std::io::prelude::*;
 use std::error::Error;
 use std::fs::File;
+use std::fs;
 use std::path::Path;
+use std::str;
 
 #[derive(Debug)]
 struct Key {
@@ -37,10 +39,9 @@ impl KeySet {
         let p = gen_prime(100);
         let q = gen_prime(100);
         let n = &p*&q;
-        let maxpq = match p.cmp(&q){ // TODO Find better way to do this
+        let maxpq = match p.cmp(&q) {
             Ordering::Less => &q,
-            Ordering::Greater => &p,
-            Ordering::Equal => &p
+            _ => &p
         };
         let phi = (&p-1u32)*(&q-1u32);
 
@@ -55,8 +56,22 @@ impl KeySet {
         }
     }
 
-    fn encrypt(&self, msg: u32) -> BigUint {
-        msg.to_biguint().unwrap().modpow(&self.e, &self.n)
+    fn from_keys(priv_key: &Key, pub_key: &Key) -> KeySet {
+        if priv_key.base != pub_key.base {
+            panic!("Incorrect key pair.");
+        }
+        let e = pub_key.exponent.clone();
+        let d = priv_key.exponent.clone();
+        let n = priv_key.base.clone();
+        KeySet {
+            e,
+            d,
+            n
+        }
+    }
+
+    fn encrypt(&self, msg: &BigUint) -> BigUint {
+        msg.modpow(&self.e, &self.n)
     }
 
     fn decrypt(&self, cipher: &BigUint) -> BigUint {
@@ -159,6 +174,10 @@ fn mult_inverse(a: &BigUint, b: &BigUint) -> BigUint {
     s0.to_biguint().expect("Error converting to unsigned integer")
 }
 
+static key_file_name: &'static str = "key";
+static public_key_suffix: &'static str = "pub";
+static encrypted_file_suffix: &'static str = "enc";
+static decrypted_file_suffix: &'static str = "dec";
 fn main() {
     let matches = App::new("RSA Encryption Algorithm")
         .setting(AppSettings::ArgRequiredElseHelp)
@@ -168,34 +187,114 @@ fn main() {
         .subcommand(SubCommand::with_name("gen")
                     .help("Generates keys"))
         .subcommand(SubCommand::with_name("encrypt")
-                    .help("Encrypts plain text file using RSA algorithm"))
+                    .about("Encrypts plain text file using RSA algorithm")
+                    .arg(Arg::with_name("key")
+                         .short("k")
+                         .long("key")
+                         .required(true)
+                         .value_name("KEY_FILE")
+                         .help("Name of key files")
+                         .takes_value(true))
+                    .arg(Arg::with_name("file")
+                         .short("f")
+                         .long("file")
+                         .required(true)
+                         .value_name("FILE")
+                         .help("Plain text file to encode")
+                         .takes_value(true)))
         .subcommand(SubCommand::with_name("decrypt")
-                    .help("Decrypts a file encrypted with RSA algorithm"))
+                    .help("Decrypts a file encrypted with RSA algorithm")
+                    .arg(Arg::with_name("key")
+                         .short("k")
+                         .long("key")
+                         .required(true)
+                         .value_name("KEY_FILE")
+                         .help("Name of key files")
+                         .takes_value(true))
+                    .arg(Arg::with_name("file")
+                         .short("f")
+                         .long("file")
+                         .required(true)
+                         .value_name("FILE")
+                         .help("Plain text file to decode")
+                         .takes_value(true)))
         .get_matches();
 
     match matches.subcommand_name() {
         Some("gen") => {
             let key_set = KeySet::new();
-            let path_priv_key = "key";
-            let path_pub_key = "key.pub";
-            create_file(path_priv_key, key_set.get_private_key().to_string().as_bytes());
-            create_file(path_pub_key, key_set.get_public_key().to_string().as_bytes());
+            create_file(key_file_name.to_string(), key_set.get_private_key().to_string().as_bytes());;
+            create_file(format!("{}.{}",key_file_name, public_key_suffix), key_set.get_public_key().to_string().as_bytes());
         },
-        Some("encrypt") => println!("encrypt"),
-        Some("decrypt") => println!("decrypt"),
+        Some("encrypt") => {
+            let matches = matches.subcommand_matches("encrypt");
+            let key_file = matches.unwrap().value_of("key").unwrap();
+            let key_set =read_key_files(key_file.to_string());
+            let file = matches.unwrap().value_of("file").unwrap();
+            encrypt_file(&file, &key_set);
+        },
+        Some("decrypt") => {
+            let matches = matches.subcommand_matches("decrypt");
+            let key_file = matches.unwrap().value_of("key").unwrap();
+            let key_set =read_key_files(key_file.to_string());
+            let file = matches.unwrap().value_of("file").unwrap();
+            decrypt_file(&file, &key_set);
+        },
         _ => println!("dafuq")
     };
+}
 
-    fn create_file(filename: &str, contents: &[u8]) {
-            let mut file = match File::create(filename) {
-                Err(why) => panic!("Couldn't create {} file. {}", filename, why.description()),
-                Ok(file) => file
-            };
+fn create_file(filename: String, contents: &[u8]) {
+    let mut file = match File::create(&filename) {
+        Err(why) => panic!("Couldn't create {} file. {}", filename, why.description()),
+        Ok(file) => file
+    };
 
-            match file.write_all(contents) {
-                Err(why) => panic!("Couldn't write to {} file. {}", filename, why.description()),
-                Ok(_) => println!("successfully created {} file.", filename)
-            };
+    match file.write_all(contents) {
+        Err(why) => panic!("Couldn't write to {} file. {}", filename, why.description()),
+        Ok(_) => println!("successfully created {} file.", filename)
+    };
+}
+
+fn read_key_files(filename: String) -> KeySet {
+    let priv_key = read_key_file(filename.to_string());
+    let pub_key = read_key_file(format!("{}.{}",key_file_name, public_key_suffix));
+    KeySet::from_keys(&priv_key, &pub_key)
+}
+fn read_key_file(filename: String) -> Key {
+    let contents = fs::read_to_string(filename)
+        .expect("Couldnt read file.");
+    let contents: Vec<&[u8]> = contents.split(' ').map(|x| x.as_bytes()).collect();
+    if contents.len() != 2 {
+        panic!("Incorrect key file format");
     }
+    let exponent = BigUint::parse_bytes(contents[0], 10)
+        .expect("Error parsing key file");
+    let base = BigUint::parse_bytes(contents[1], 10)
+        .expect("Error parsing key file");
+    Key {
+        exponent,
+        base
+    }
+}
 
+fn encrypt_file(file: &str, key_set: &KeySet) {
+    let contents = fs::read_to_string(file)
+        .expect("Couldnt read file.");
+    let encoded = BigUint::from_bytes_be(contents.as_bytes());
+    println!("{:#?}", encoded);
+    let encrypted = key_set.encrypt(&encoded);
+    create_file(format!("{}.{}", file, encrypted_file_suffix), &encrypted.to_bytes_be());
+}
+
+fn decrypt_file(file: &str, key_set: &KeySet) {
+    let contents = fs::read(file)
+        .expect("Couldnt read file.");
+    let decoded = BigUint::from_bytes_be(&contents);
+    let decrypted = key_set.decrypt(&decoded);
+    println!("{:#?}", decrypted);
+    let decrypted = decrypted.to_bytes_be();
+    let decrypted = str::from_utf8(&decrypted);
+    let decrypted = decrypted.unwrap().to_string();
+    create_file(format!("{}.{}", file, decrypted_file_suffix), decrypted.as_bytes());
 }
