@@ -1,15 +1,15 @@
-# OG_RSA
+# og_rsa
 Implementation of the original RSA algorithm in Rust.
 
 MADE FOR LEARNING AND FUN. SHOULD **NOT** BE USED IN PRODUCTION.
 
 
-**OG_RSA** is pretty much a direct implementation of the [original RSA paper](http://people.csail.mit.edu/rivest/Rsapaper.pdf), hence the name.
+**og_rsa** is pretty much a direct implementation of the [original RSA paper](http://people.csail.mit.edu/rivest/Rsapaper.pdf), hence the name.
 
 ## Usage
 I am using _Cargo_ as my build system. Clone this repository and run a `cargo build`.
 
-NOTE: **OG_RSA** can currently handle only small(< ~128 byte) files.
+NOTE: **og_rsa** can currently handle only small(< ~128 byte) files.
 
 ### Key generation
 The first step is to generate  a public/private key pair using `./rsa generate`.
