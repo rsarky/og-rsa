@@ -53,8 +53,8 @@ SUBCOMMANDS:
 ```
 
 ## TODO
-- Add support for arbitrary sized files.
-- Tests
-- Padding
-- Make things configurable (number of bits in the key, key file name, public key suffix etc.)
-- Better error handling
+- [ ] Add support for arbitrary sized files.
+- [ ] Tests
+- [ ] Padding
+- [ ] Make things configurable (number of bits in the key, key file name, public key suffix etc.)
+- [ ] Better error handling
