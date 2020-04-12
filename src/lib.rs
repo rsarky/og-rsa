@@ -33,7 +33,7 @@ impl KeySet {
         let p = util::gen_prime(num_bits/2);
         let q = util::gen_prime(num_bits/2);
         let n = &p*&q;
-        println!("{}", n.bits());
+        println!("No. of bits in key: {}", n.bits());
         let maxpq = match p.cmp(&q) {
             Ordering::Less => &q,
             _ => &p

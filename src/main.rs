@@ -1,8 +1,3 @@
-extern crate clap;
-extern crate rand;
-extern crate num_bigint as bigint;
-extern crate num_traits;
-
 use og_rsa::{KeySet, create_file, read_key_files, encrypt_file, decrypt_file};
 use clap::{Arg, App, SubCommand, AppSettings};
 
